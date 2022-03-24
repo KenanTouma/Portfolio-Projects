@@ -1,0 +1,424 @@
+---
+title: "Bellabeat Case Study"
+author: "Kenan Touma"
+date: '2022-03-22'
+output:
+  cleanrmd::html_document_clean:
+    theme: markdown-modest
+    toc: true
+    toc_float: true
+---
+
+# Introduction
+
+## About Bellabeat
+
+Bellabeat is a high-tech manufacturer of health-related products for women. Currently, Bellabeat boasts a line of products including the Leaf, which is a wellness tracker that can be worn as a bracelet, necklace, or a clip. They also sell their Time product, which is a wellness watch that combines the timeless look of a timepiece with smart technology to track user activity, sleep. and stress. Bellabeat also offers their Spring product, which is a water bottle that tracks daily water intake using smart technology. Finally, to tie all the products together, Bellabeat offers an application that users can download to track all their health parameters. Urška Sršen, co-founder and Chief Creative Officer of Bellabeat, believes that analyzing smart device fitness data could help unlock new growth opportunities for the company.
+
+<center>
+![ ](C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\R Files\\Bellabeat Photo.png)
+</center>
+
+## Business Task at Hand
+
+I have been asked to analyze smart device usage data in order to gain insights into how consumers use non-Bellabeat smart devices. I have also been tasked to perform exploratory analysis into how Bellabeat can use these insights to further improve their business models.
+
+## Data Sources Used
+
+I will be using the public data set [FitBit Fitness Tracker Data](https://www.kaggle.com/arashnic/fitbit) offered by Mobius.
+
+## What the Project Will Entail
+
+I will be focusing my analysis to explore four main topics which I believe will help deliver an overall better product and thus lead to a healthier customer and thus, a healthier business.
+
+* Battery Longevity
+* A Notification System
+* Important Features
+* A Virtual Marketplace
+
+# Pre-Processing
+
+## Information About the Data
+
+This public data is from users who use the FitBit health tracker, a direct competitor to Bellabeat, and provides information about the usage of the device by the minute, hour, and daily. I will be doing both exploratory and comparative analysis to see what Bellabeat could implement based on the findings.
+
+## Package Installation
+
+'tidyverse', 'lubridate', 'dplyr', 'ggplot2', 'tidyr', 'readr', 'janitor', 'skimr', 'openair', 'psych', 'VennDiagram', 'DataExplorer', 'formattable'
+
+## Loading Packages
+```{r}
+library('tidyverse')
+library('lubridate')
+library('dplyr')
+library('ggplot2')
+library('tidyr')
+library('readr')
+library('janitor')
+library('skimr')
+library('openair')
+library('psych')
+library('VennDiagram')
+library('DataExplorer')
+library('formattable')
+```
+
+## Importing Data
+```{r}
+hourly_calories <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\hourlyCalories_merged.csv")
+hourly_intensities <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\hourlyIntensities_merged.csv")
+hourly_steps <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\hourlySteps_merged.csv")
+daily_activity <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\dailyActivity_merged.csv")
+daily_calories <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\dailyCalories_merged.csv")
+daily_sleep <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\sleepDay_merged.csv")
+daily_weight <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\weightLogInfo_merged.csv")
+heart_rate <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\heartrate_seconds_merged.csv")
+```
+
+
+# Data Exploration and Analysis 1 - Battery Longevity
+
+## First Glance
+
+```{r}
+head(hourly_calories)
+head(hourly_intensities)
+head(hourly_steps)
+
+str(hourly_calories)
+str(hourly_intensities)
+str(hourly_steps)
+```
+
+## Unique IDs
+
+```{r}
+n_distinct(hourly_calories$Id)
+n_distinct(hourly_intensities$Id)
+n_distinct(hourly_steps$Id)
+```
+
+## Formatting
+
+```{r}
+hourly_calories$ActivityHour <- mdy_hms(hourly_calories$ActivityHour)
+hourly_intensities$ActivityHour <- mdy_hms(hourly_intensities$ActivityHour)
+hourly_steps$ActivityHour <- mdy_hms(hourly_steps$ActivityHour)
+```
+
+## Data Merging
+
+```{r}
+merged_hourly_data1 <- merge(hourly_calories, hourly_intensities, by = c("Id", "ActivityHour"))
+merged_hourly_data <- merge(merged_hourly_data1, hourly_steps, by =c("Id", "ActivityHour"))
+merged_hourly_data <- merged_hourly_data[,c(1,2,6,3,4,5)]
+n_distinct(merged_hourly_data$Id)
+str(merged_hourly_data)
+```
+
+## Splitting Columns
+
+```{r}
+merged_hourly_data$Date <- format(as.POSIXct(merged_hourly_data$ActivityHour, format = "%Y:%m:$d %H:%M:%S"), "%Y-%m-%d")
+merged_hourly_data$Time <- format(as.POSIXct(merged_hourly_data$ActivityHour, format = "%Y:%m:$d %H:%M:%S"), "%H:%M:%S")
+```
+
+## More Formatting
+
+```{r}
+merged_hourly_data <- merged_hourly_data[,c(1,2,7,8,3,4,5,6)]
+```
+
+## Grouping by Time
+```{r}
+aggregate(cbind(Calories,StepTotal,TotalIntensity) ~ Time, merged_hourly_data, mean)
+
+grouped_data_by_hourly <- aggregate(cbind(Calories,StepTotal,TotalIntensity) ~ Time, merged_hourly_data, mean)
+```
+
+Now, we will see how many hours per day are classified as high usage hours, I.E the usage of the product in that hour is higher than the average usage throughout the day:
+
+```{r}
+high_usage_hours_calories <- grouped_data_by_hourly %>%
+  summarise(
+    user_type = factor(case_when(
+      Calories > mean(Calories) ~ "High Hourly Usage",
+      Calories < mean(Calories) ~ "Low Hourly Usage",
+    ), levels = c("High Hourly Usage", "Low Hourly Usage")), Calories, .group = Time) %>% 
+  drop_na()
+  
+high_usage_hours_steps <- grouped_data_by_hourly %>%
+  summarise(
+    user_type = factor(case_when(
+      StepTotal > mean(StepTotal) ~ "High Hourly Usage",
+      StepTotal < mean(StepTotal) ~ "Low Hourly Usage",
+    ), levels = c("High Hourly Usage", "Low Hourly Usage")), StepTotal, .group = Time) %>% 
+  drop_na()
+
+
+high_usage_hours_intensity <- grouped_data_by_hourly %>%
+  summarise(
+    user_type = factor(case_when(
+      TotalIntensity > mean(TotalIntensity) ~ "High Hourly Usage",
+      TotalIntensity < mean(TotalIntensity) ~ "Low Hourly Usage",
+    ), levels = c("High Hourly Usage", "Low Hourly Usage")), TotalIntensity, .group = Time) %>%
+  drop_na()
+```
+
+## Visualization
+
+```{r}
+high_usage_hours_calories %>% 
+  group_by(user_type) %>% 
+  summarise(total = n()) %>% 
+  mutate(totals = sum(total)) %>% 
+  group_by(user_type) %>% 
+  summarise(Percentage_Usage = total/totals) %>% 
+  ggplot(aes(user_type, y = Percentage_Usage, fill = user_type)) + geom_col() + scale_y_continuous(labels = scales::percent) + labs(title = "Usage Type Distribution", x=NULL) + geom_text(mapping = aes(label=Percentage_Usage*100), position = position_dodge(width=0.9), cex = 2.5, vjust = -4) 
+
+high_usage_hours_steps %>% 
+  group_by(user_type) %>% 
+  summarise(total = n()) %>% 
+  mutate(totals = sum(total)) %>% 
+  group_by(user_type) %>% 
+  summarise(Percentage_Usage = total/totals) %>% 
+  ggplot(aes(user_type, y = Percentage_Usage, fill = user_type)) + geom_col() + scale_y_continuous(labels = scales::percent) + labs(title = "Usage Type Distribution", x=NULL)+ geom_text(mapping = aes(label=Percentage_Usage*100), position = position_dodge(width=0.9), cex = 2.5, vjust = -4)
+
+
+high_usage_hours_intensity %>% 
+  group_by(user_type) %>% 
+  summarise(total = n()) %>% 
+  mutate(totals = sum(total)) %>% 
+  group_by(user_type) %>% 
+  summarise(Percentage_Usage = total/totals) %>% 
+  ggplot(aes(user_type, y = Percentage_Usage, fill = user_type)) + geom_col() + scale_y_continuous(labels = scales::percent) + labs(title = "Usage Type Distribution", x=NULL)+ geom_text(mapping = aes(label=Percentage_Usage*100), position = position_dodge(width=0.9), cex = 2.5, vjust = -4)
+
+```
+
+## **Key Takeaway 1:** 
+
+<style>
+div.yellow {background-color:#ffd966, border-radius: 5px; padding: 20px;}
+</style>
+<div class = "yellow">
+
+<mark> We notice that for all three metrics, around 54% or 13 hours are considered high usage hours and around 46% or 11 hours are considered low usage hours. It is imperative that the battery life can withstand such usage on a single charge. </mark>
+
+</div>
+
+
+
+# Data Exploration and Analysis 2 - Hourly Usage for Notifications
+
+## Grouping
+
+We now want to take a look at what hours of the day are high usage, so we know when to send the users notifications. We will assign a usage type to each of our three categories (calories, steps, intensity):
+
+```{r}
+high_usage_hours_calories <- high_usage_hours_calories %>% 
+  rename(Time = .group)
+
+high_usage_hours_calories_merged <- merge(high_usage_hours_calories, grouped_data_by_hourly, by = c("Time", "Calories"))
+
+high_usage_hours_intensity <- high_usage_hours_intensity %>% 
+  rename(Time = .group)
+
+high_usage_hours_intensity_merged <- merge(high_usage_hours_intensity, grouped_data_by_hourly, by = c("Time", "TotalIntensity"))
+
+high_usage_hours_steps <- high_usage_hours_steps %>% 
+  rename(Time = .group)
+
+high_usage_hours_steps_merged <- merge(high_usage_hours_steps, grouped_data_by_hourly, by = c("Time", "StepTotal"))
+```
+
+
+## Visualization
+
+```{r}
+
+ggplot(high_usage_hours_calories_merged, aes(x= Time, y= Calories, fill=user_type)) + geom_col() + theme(axis.text.x = element_text(angle = 45, hjust = 1.2))
+
+ggplot(high_usage_hours_intensity_merged, aes(x= Time, y= TotalIntensity, fill=user_type)) + geom_col() + theme(axis.text.x = element_text(angle = 45, hjust = 1.2))
+
+ggplot(high_usage_hours_steps_merged, aes(x= Time, y= StepTotal, fill=user_type)) + geom_col() + theme(axis.text.x = element_text(angle = 45, hjust = 1.2))
+```
+
+
+## First Glance
+It is important to see if users who actually use the product see results. For this part of the presentation, we will look at daily data instead of hourly data to see more long-term trends:
+
+```{r}
+head(daily_activity)
+head(daily_calories)
+head(daily_sleep)
+head(daily_weight)
+
+str(daily_activity)
+str(daily_calories)
+str(daily_sleep)
+str(daily_weight)
+
+n_distinct(daily_activity$Id)
+n_distinct(daily_calories$Id)
+n_distinct(daily_sleep$Id)
+n_distinct(daily_weight$Id)
+```
+
+## Formatting
+
+```{r}
+daily_activity <- daily_activity %>% 
+  rename(Date = ActivityDate)
+daily_calories <- daily_calories %>% 
+  rename(Date = ActivityDay)
+daily_sleep <- daily_sleep %>% 
+  rename(Date = SleepDay)
+
+daily_activity$Date <- mdy(daily_activity$Date)
+daily_calories$Date <- mdy(daily_calories$Date)
+daily_sleep$Date <- mdy_hms(daily_sleep$Date)
+```
+
+## Merging
+
+```{r}
+merged_daily_data1 <- merge(daily_activity, daily_calories, by = c("Id", "Date", "Calories"))
+merged_daily_data <- merge(merged_daily_data1, daily_sleep, by = c("Id", "Date"))
+n_distinct(merged_daily_data$Id)
+```
+
+## More Formatting
+
+```{r}
+merged_daily_data <- merged_daily_data %>% 
+  select(-TrackerDistance, -LoggedActivitiesDistance)
+merged_daily_data <- merged_daily_data[,c(1,2,3,5,4,6:16)]
+colnames(merged_daily_data)[colnames(merged_daily_data) %in% c("FairlyActiveMinutes")] <- c("ModeratelyActiveMinutes")
+```
+
+## Grouping 
+
+We will now group users into categories based on their activity levels and comparing the amount of 1) Calories Burned and 2) Total Minutes Slept:
+
+```{r}
+grouped_data_by_daily_calories <- merged_daily_data %>% 
+  summarise(
+    user_type = factor(case_when(
+      SedentaryMinutes > mean(SedentaryMinutes) & LightlyActiveMinutes < mean(LightlyActiveMinutes) & ModeratelyActiveMinutes < mean(ModeratelyActiveMinutes) & VeryActiveMinutes < mean(VeryActiveMinutes) ~ "Sedentary User",
+      SedentaryMinutes < mean(SedentaryMinutes) & LightlyActiveMinutes > mean(LightlyActiveMinutes) & ModeratelyActiveMinutes < mean(ModeratelyActiveMinutes) & VeryActiveMinutes < mean(VeryActiveMinutes) ~ "Lightly Active User",
+      SedentaryMinutes < mean(SedentaryMinutes) & LightlyActiveMinutes < mean(LightlyActiveMinutes) & ModeratelyActiveMinutes > mean(ModeratelyActiveMinutes) & VeryActiveMinutes < mean(VeryActiveMinutes) ~ "Moderately Active User",
+      SedentaryMinutes < mean(SedentaryMinutes) & LightlyActiveMinutes < mean(LightlyActiveMinutes) & ModeratelyActiveMinutes < mean(ModeratelyActiveMinutes) & VeryActiveMinutes > mean(VeryActiveMinutes) ~ "Very Active User",
+    ), levels = c("Sedentary User","Lightly Active User","Moderately Active User", "Very Active User")), Calories, .group= Id) %>% 
+  drop_na()
+
+grouped_data_by_daily_sleep <- merged_daily_data %>% 
+  summarise(
+    user_type = factor(case_when(
+      SedentaryMinutes > mean(SedentaryMinutes) & LightlyActiveMinutes < mean(LightlyActiveMinutes) & ModeratelyActiveMinutes < mean(ModeratelyActiveMinutes) & VeryActiveMinutes < mean(VeryActiveMinutes) ~ "Sedentary User",
+      SedentaryMinutes < mean(SedentaryMinutes) & LightlyActiveMinutes > mean(LightlyActiveMinutes) & ModeratelyActiveMinutes < mean(ModeratelyActiveMinutes) & VeryActiveMinutes < mean(VeryActiveMinutes) ~ "Lightly Active User",
+      SedentaryMinutes < mean(SedentaryMinutes) & LightlyActiveMinutes < mean(LightlyActiveMinutes) & ModeratelyActiveMinutes > mean(ModeratelyActiveMinutes) & VeryActiveMinutes < mean(VeryActiveMinutes) ~ "Moderately Active User",
+      SedentaryMinutes < mean(SedentaryMinutes) & LightlyActiveMinutes < mean(LightlyActiveMinutes) & ModeratelyActiveMinutes < mean(ModeratelyActiveMinutes) & VeryActiveMinutes > mean(VeryActiveMinutes) ~ "Very Active User",
+    ), levels = c("Sedentary User","Lightly Active User","Moderately Active User", "Very Active User")), TotalMinutesAsleep, .group= Id) %>% 
+  drop_na()
+```
+
+## User Breakdown
+
+```{r}
+grouped_data_by_daily_calories %>% 
+  group_by(user_type) %>% 
+  summarise(total = n()) %>% 
+  mutate(totals = sum(total)) %>% 
+  group_by(user_type) %>% 
+  summarise(total_percent = total/totals) %>% 
+  ggplot(aes(user_type, y = total_percent, fill = user_type)) + geom_col() + scale_y_continuous(labels = scales::percent) + labs(title = "User Type Distribution", x = NULL) + theme(axis.text.x = element_text(angle = 45, hjust = 1.2))
+
+
+grouped_data_by_daily_sleep %>% 
+  group_by(user_type) %>% 
+  summarise(total = n()) %>% 
+  mutate(totals = sum(total)) %>% 
+  group_by(user_type) %>% 
+  summarise(total_percent = total/totals) %>% 
+  ggplot(aes(user_type, y = total_percent, fill = user_type)) + geom_col() + scale_y_continuous(labels = scales::percent) + labs(title = "User Type Distribution", x=NULL) + theme(axis.text.x = element_text(angle = 45, hjust = 1.2))
+```
+
+## User Comparisons
+
+```{r}
+ggplot(grouped_data_by_daily_calories, aes(user_type, Calories, fill = user_type)) + geom_boxplot() + theme(legend.position = "none") + labs(title = "calories burned by user", x= NULL) + theme(legend.position = "none", text = element_text(size = 20), plot.title = element_text(hjust = 0.5)) + theme(axis.text.x = element_text(angle = 45, hjust = 1.2))
+
+ggplot(grouped_data_by_daily_sleep, aes(user_type, TotalMinutesAsleep, fill = user_type)) + geom_boxplot()+ theme(legend.position = "none") + labs(title = "calories burned by user", x= NULL) + theme(legend.position = "none", text = element_text(size = 20), plot.title = element_text(hjust = 0.5)) + theme(axis.text.x = element_text(angle = 45, hjust = 1.2))
+
+```
+
+## **Key Takeaway 2:** 
+<mark> We can see that for all three categories, the 13 high usage hours are from 8:00 AM till 9:00 PM. It is important to send the user notifications during these times as they are more likely to give it notice. These notifications could be reminders to exercise, which in the long term would lead to a healthier customer as we can see from our long term trends. These long term trends indicate that very active users tend to burn more calories per day as well as have a much more consistent sleep schedule. A happier customer will be more willing to buy product from Bellabeat in the future and/or recommend Bellabeat to friends, family, colleagues, etc. The notifications could also include Marketplace recommendations, which will be further elaborated on a little later in the presentation. </mark>
+
+
+# Data Exploration and Analysis 3 - Features
+
+## Unique IDs
+
+```{r}
+n_distinct(daily_activity$Id)
+n_distinct(daily_sleep$Id)
+n_distinct(daily_weight$Id)
+n_distinct(heart_rate$Id)
+```
+
+## Visualization
+
+```{r}
+step_ids <- unique(daily_activity$Id, incomparables = FALSE)
+sleep_ids <- unique(daily_sleep$Id, incomparables = FALSE)
+heartrate_ids <- unique(heart_rate$Id, incomparables = FALSE)
+weight_ids <- unique(daily_weight$Id, incomparables = FALSE)
+
+venn <- venn.diagram(x = list(step_ids, sleep_ids, heartrate_ids, weight_ids),
+                     category.names = c("Pedometer", "Sleep Monitor", "Heart Monitor", "Weight Logger"),
+                     filename = "Venn_Diagram_Features_Final.png",
+                     output = TRUE, imagetype = "png",
+                     lwd = 2, fill = c("skyblue", "pink1", "mediumorchid", "orange"),
+                     cex = 1, fontface = "bold", fontfamily = "sans",
+                     cat.cex = 0.7, cat.fontface = "bold", cat.default.pos = "outlier", cat.fontfamily = "sans")
+```
+
+
+![ ](C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\R Files\\Venn_Diagram_Features_final.png)
+
+## **Key Takeaway 3:** 
+<mark> By looking at the Venn Diagram, we can see that the pedometer is the most used feature overall whereas the weight logger is the least used feature. This information is important for a few reasons. If Bellabeat were to introduce a new product to their line, such as, a budget option which contains less features for a lower price, they should include the pedometer as that seems to be the most desired feature. Another important implementation of this information is how to potentially advertise the products. Bellabeat should focus on the pedometer feature more than other features in their advertising campaigns as that seems to be more important to consumers. </mark>
+
+# Data Exploration and Visualization 4
+
+We will look at some general trends amongst users. This is so we can better target ads on our virtual marketplace. The virtual marketplace is a potential feature on the Bellabeat application which will allow Bellabeat to sell either their own products or products from specific, vetted, and ethical companies that alighn with Bellabeat's mission. Bellabeat can monetize these sales by taking a certain percentage off the top for every sale on Bellabeat's application. To increase the chances of sales traffic, it is important that we target the specific products to customers' needs. I will provide a few examples:
+
+## Relationship 1
+
+
+```{r}
+ggplot(merged_daily_data, aes(x=TotalSteps, y = Calories)) + geom_point() + geom_smooth() + labs (title = 'total steps vs Calories Burned')
+```
+
+This plot shows us that there is a positive correlation between total steps taken and amount of calories burned. Based off of this finding, Bellabeat could target users who take fewer total steps  with products such as running shoes, or the Bellabeat Spring with an encouraging statement informing them that taking more steps is correlated with burning more calories.
+
+## Relationship 2
+
+```{r}
+ggplot(merged_daily_data, aes(x=TotalMinutesAsleep, y = SedentaryMinutes)) + geom_point() + geom_smooth() + labs(title='Minutes Asleep vs Sedentary Minutes')
+```
+
+This plot shows us that there is a negative correlation between total minutes asleep and sedentary minutes. Based off of this finding, Bellabeat could target users who sleep fewer total minutes with products such as sleep aids or weighted blankets with an encouraging statement informing them that sleeping more minutes will allow for a more active lifestyle.
+
+## **Key Takeaway 4:**  
+<mark> By analyzing certain long term trends, Bellabeat could add a Marketplace feature into their app which would target users by recommending certain products to them based on their habits. This marketplace could include Bellabeat's own product line as well as potentially products from other brands which will be thoroughly vetted and aligned with Bellabeat's mission statement, allowing for Bellabeat to monetize their platform by taking certain percentages off of sales. </mark>
+
+# Concluding Remarks
+
+I would like to thank you for taking the time to go through this analysis. 
+The key takeaways I would like to leave Bellabeat with are:
+* A battery that can withstand 13 hours of higher usage and 11 hours of lower usage - Bellabeat could use the lower usage times to allow for charging
+* A notification system that primarily acts between the hours of 8:00 AM and 9:00 PM as that is when users are most active. The notification system will serve two purposes: 1) Exercise Reminders and 2) Marketplace recommendations.
+* The most desired feature in these products is the pedometer and the least desired feature is the weight logger. Bellabeat could use this information to better advertise their products as well as to know what features to focus on in future products.
+* A potential implementation of a virtual marketplace where Bellabeat could sell their products as well as products from other vetted and ethical brands which support Bellabeat's mission statement. This will allow for another monetization stream. The products on the marketplace could be targetted to consumers based on their exercise habits.
