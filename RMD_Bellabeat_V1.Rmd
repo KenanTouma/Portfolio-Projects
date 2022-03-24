@@ -1,0 +1,248 @@
+---
+title: "Bellabeat Case Study"
+author: "Kenan Touma"
+date: '2022-03-21'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## About Bellabeat
+
+Bellabeat is a high-tech manufacturer of health-focused products for women. Urška Sršen, cofounder and Chief Creative Officer of Bellabeat, believes that analyzing smart device fitness data could help unlock new growth opportunities for the company.
+
+## Business Task at Hand
+
+Identify potential opportunities for growth and recommendations for the Bellabeat marketing strategy improvement based on trends in smart device usage.
+
+## Data Sources Used
+
+[FitBit Fitness Tracker Data](https://www.kaggle.com/arashnic/fitbit) by Mobius
+
+## Pre-Analysis Prep
+
+### Installing Packages
+```{These are the packages I installed and used for this analysis}
+'tidyverse', 'lubridate', 'dplyr', 'ggplot2', 'tidyr', 'readr', 'janitor', 'skimr', 'openair', 'psych', 'VennDiagram', 'DataExplorer', 'formattable'
+
+```
+
+
+### Loading Packages
+```{r}
+library('tidyverse')
+library('lubridate')
+library('dplyr')
+library('ggplot2')
+library('tidyr')
+library('readr')
+library('janitor')
+library('skimr')
+library('openair')
+library('psych')
+library('VennDiagram')
+library('DataExplorer')
+library('formattable')
+```
+
+### Importing Data Sets
+These files are directly from [FitBit Fitness Tracker Data](https://www.kaggle.com/arashnic/fitbit) by Mobius. I looked over the data using Google Sheets to ensure there were no errors.
+```{r}
+activity <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\dailyActivity_merged.csv")
+calories <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\dailyCalories_merged.csv")
+intensities <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\dailyIntensities_merged.csv")
+sleep <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\sleepDay_merged.csv")
+weight <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\weightLogInfo_merged.csv")
+heart_rate <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\heartrate_seconds_merged.csv")
+hourly_steps <- read.csv("C:\\Users\\Kinan Touma\\Desktop\\Portfolio Projects\\Project Bellabeat\\Data\\Fitabase Data 4.12.16-5.12.16\\hourlySteps_merged.csv")
+```
+
+
+
+## Data Cleaning and Data Manipulation
+
+### Checking for Unique Participants
+```{r}
+n_distinct(activity$Id)
+n_distinct(calories$Id)
+n_distinct(intensities$Id)
+n_distinct(sleep$Id)
+n_distinct(weight$Id)
+n_distinct(heart_rate$Id)
+n_distinct(hourly_steps$Id)
+```
+
+Here, we are checking for the number of unique users in each of our data sets. We can see that the activity, calories, intensities, and hourly steps have 33 unique users. The heart rate data set has 14 users, and the weights data set has 8 users. For the sake of analysis, we will not be looking at the weight data set as the number of users are too few, which might cause bias.
+
+### Summarizing Data
+```{r}
+activity %>% 
+  select(TotalSteps, TotalDistance, VeryActiveDistance, ModeratelyActiveDistance, LightActiveDistance, SedentaryActiveDistance) %>% 
+  summary()
+
+activity %>% 
+  select(TotalSteps, TotalDistance, VeryActiveMinutes, FairlyActiveMinutes, LightlyActiveMinutes, SedentaryMinutes) %>% 
+  summary()
+
+calories %>% 
+  select(Calories) %>% 
+  summary()
+
+sleep %>% 
+  select(TotalSleepRecords, TotalMinutesAsleep, TotalTimeInBed) %>% 
+  summary()
+
+heart_rate %>% 
+  summary()
+
+hourly_steps %>% 
+  summary()
+```
+
+By looking at these summaries, we can see that most users' exercise habits fall under the lightly active or sedentary categories. We can also see that the average sleep time for the users is roughly 7 hours, which is a little under the recommended sleep time.
+
+### Merging Data
+
+Before we can start analyzing the data, it would be a good idea to merge the tables for ease of use.
+
+We first start off by changing the the date-specific column names to 'Date', so we can perform an inner join on the other tables.
+```{r}
+activity <- activity %>% 
+  rename(Date = ActivityDate) # Changing ActivityDate in the Activity data set to Date
+
+calories <- calories %>% 
+  rename(Date = ActivityDay) # Changing ActivityDay in the Calories data set to Date
+
+sleep <- sleep %>% 
+  rename(Date = SleepDay) # Changing SleepDay in the Sleep data set to Date
+
+heart_rate <- heart_rate %>% 
+  rename(Date = Time) # Changing Time in the Heart Rate data set to Date
+
+hourly_steps <- hourly_steps %>% 
+  rename(Date = ActivityHour) # Changing ActivityHour in the Hourly Steps data set to Date
+```
+
+We also need to convert the formatting of the date columns because they are in string format.
+
+```{r}
+activity$Date <- mdy(activity$Date)
+
+calories$Date <- mdy(calories$Date)
+
+sleep$Date <- mdy_hms(sleep$Date)
+
+heart_rate$Date <- mdy_hms(heart_rate$Date)
+
+hourly_steps$Date <- mdy_hms(hourly_steps$Date)
+
+
+```
+
+
+Merging the data
+```{r}
+merged_data <- merge(sleep, activity, by = c("Id", "Date")) %>%  # I merged the data in the activity and sleep columns on "Id" and "Date"
+  select(-TrackerDistance, -LoggedActivitiesDistance)            # I got rid of redundant columns    
+merged_data <- merged_data[,c(1,2,6:16,3:5)]                     # I reorganized columns in the order I wanted
+colnames(merged_data)[colnames(merged_data) %in% c("FairlyActiveMinutes")] <- c("ModeratelyActiveMinutes") # I changed the column name Fairly Active Minutes to Moderately Active Minutes to match the rest of the data set.
+head(merged_data)
+n_distinct(merged_data$Id)
+```
+
+### Grouping Users
+
+By looking at the data, I believe a good way to start the analysis process is to group users into 4 categories, describing their activity levels.
+
+Here, we are grouping activity levels and looking at the amount of calories burned for each of the groups.
+```{r}
+data_by_usertype_calories <- merged_data %>% 
+  summarise(
+    user_type = factor(case_when(
+      SedentaryMinutes > mean(SedentaryMinutes) & LightlyActiveMinutes < mean(LightlyActiveMinutes) & ModeratelyActiveMinutes < mean(ModeratelyActiveMinutes) & VeryActiveMinutes < mean(VeryActiveMinutes) ~ "Sedentary",
+      SedentaryMinutes < mean(SedentaryMinutes) & LightlyActiveMinutes > mean(LightlyActiveMinutes) & ModeratelyActiveMinutes < mean(ModeratelyActiveMinutes) & VeryActiveMinutes < mean(VeryActiveMinutes) ~ "Lightly Active",
+      SedentaryMinutes < mean(SedentaryMinutes) & LightlyActiveMinutes < mean(LightlyActiveMinutes) & ModeratelyActiveMinutes > mean(ModeratelyActiveMinutes) & VeryActiveMinutes < mean(VeryActiveMinutes) ~ "Moderately Active",
+      SedentaryMinutes < mean(SedentaryMinutes) & LightlyActiveMinutes < mean(LightlyActiveMinutes) & ModeratelyActiveMinutes < mean(ModeratelyActiveMinutes) & VeryActiveMinutes > mean(VeryActiveMinutes) ~ "Very Active",
+    ), levels = c("Sedentary", "Lightly Active", "Moderately Active", "Very Active")), Calories, .group= Id) %>% 
+  drop_na()
+head(data_by_usertype_calories)
+```
+I will now calculate the total number of participants in each category through a visual.
+
+```{r}
+data_by_usertype_calories %>% 
+  group_by(user_type) %>% 
+  summarise(total = n()) %>% 
+  mutate(totals = sum(total)) %>% 
+  group_by(user_type) %>% 
+  summarise(total_percent = total/totals) %>% 
+  ggplot(aes(user_type, y = total_percent, fill = user_type)) + geom_col() + scale_y_continuous(labels = scales::percent) + labs(title = "User Type Distribution", x=NULL)
+```
+
+We can see here that most users fall under the 'Sedentary' or the 'Lightly Active Categories'. We will now see how these categories differ in terms of calories burned.
+
+```{r}
+ggplot(data_by_usertype_calories, aes(user_type, Calories, fill=user_type)) + geom_boxplot() + theme(legend.position = "none") + labs(title = "calories burned by user", x= NULL) + theme(legend.position = "none", text = element_text(size = 20), plot.title = element_text(hjust = 0.5))
+```
+
+This data shows us that the users in the Very active category are burning more calories than others. 
+
+We will now group the users into the same four categories and compare their sleeping habits.
+```{r}
+data_by_usertype_TotalMinutesAsleep <- merged_data %>% 
+  summarise(
+    user_type = factor(case_when(
+      SedentaryMinutes > mean(SedentaryMinutes) & LightlyActiveMinutes < mean(LightlyActiveMinutes) & ModeratelyActiveMinutes < mean(ModeratelyActiveMinutes) & VeryActiveMinutes < mean(VeryActiveMinutes) ~ "Sedentary",
+      SedentaryMinutes < mean(SedentaryMinutes) & LightlyActiveMinutes > mean(LightlyActiveMinutes) & ModeratelyActiveMinutes < mean(ModeratelyActiveMinutes) & VeryActiveMinutes < mean(VeryActiveMinutes) ~ "Lightly Active",
+      SedentaryMinutes < mean(SedentaryMinutes) & LightlyActiveMinutes < mean(LightlyActiveMinutes) & ModeratelyActiveMinutes > mean(ModeratelyActiveMinutes) & VeryActiveMinutes < mean(VeryActiveMinutes) ~ "Moderately Active",
+      SedentaryMinutes < mean(SedentaryMinutes) & LightlyActiveMinutes < mean(LightlyActiveMinutes) & ModeratelyActiveMinutes < mean(ModeratelyActiveMinutes) & VeryActiveMinutes > mean(VeryActiveMinutes) ~ "Very Active",
+    ), levels = c("Sedentary", "Lightly Active", "Moderately Active", "Very Active")), TotalMinutesAsleep, TotalTimeInBed, .group= Id) %>% 
+  drop_na()
+data_by_usertype_TotalMinutesAsleep$TimeInBedAwake =  data_by_usertype_TotalMinutesAsleep$TotalTimeInBed - data_by_usertype_TotalMinutesAsleep$TotalMinutesAsleep
+```
+
+```{r}
+ggplot(data_by_usertype_TotalMinutesAsleep, aes(user_type, TotalMinutesAsleep, fill=user_type)) + geom_boxplot() + theme(legend.position = "none") + labs(title = "Total Minutes Slept", x= NULL) + theme(legend.position = "none", text = element_text(size = 20), plot.title = element_text(hjust = 0.5))
+```
+This graph shows us that the very active group sleeps for a consistent amount of roughly 8 hours a day, which is the recommended amount. We can also see that the sedentary group sleeps less on average, but also has a high degree of variability, with a variety of over sleepers and under sleepers.
+
+I also want to look at what features are used by the different users of the Bellabeat products.
+```{r}
+step_ids <- unique(activity$Id, incomparables = FALSE)
+sleep_ids <- unique(sleep$Id, incomparables = FALSE)
+heartrate_ids <- unique(heart_rate$Id, incomparables = FALSE)
+weight_ids <- unique(weight$Id, incomparables = FALSE)
+
+venn <- venn.diagram(x = list(step_ids, sleep_ids, heartrate_ids, weight_ids),
+                     category.names = c("Steps Count", "Sleep Monitor", "Heart Monitor", "Weight Tracking"),
+                     filename = "Venn_Diagram_Features.png",
+                     output = TRUE, imagetype = "png",
+                     lwd = 2, fill = c("skyblue", "pink1", "mediumorchid", "orange"),
+                     cex = 1, fontface = "bold", fontfamily = "sans",
+                     cat.cex = 0.7, cat.fontface = "bold", cat.default.pos = "outlier", cat.fontfamily = "sans")
+```
+![](Venn_Diagram_Features.png)
+This 4-set Venn Diagram shows us that among a total of 33 unique users:
+* 100% (33 IDs) use the Steps Count feature.
+* 73% (24 IDs) use the Steps Count AND Sleep Tracking features.
+* 42% (14 IDs) use the Steps Count AND Heart Rate Monitor features.
+* 24% (8 IDs) use the Steps Count AND Weight Tracking features.
+* 9% (3 IDs) use Steps Count AND Sleep Tracking AND Heart Rate Monitor AND Weight Tracking.
+
+
+## Visualizations
+
+I will now plot a few graphs to show some correlations between different factors.
+```{r}
+
+ggplot(merged_data, aes(x = TotalMinutesAsleep, y = Calories)) + geom_point() + geom_smooth() + labs(title = 'Total Time Asleep Vs. Calories')
+
+ggplot(merged_data, aes(x = TotalSteps, y = Calories)) + geom_point() + geom_smooth() + labs(title = "Total steps Vs. Calories")
+
+ggplot(merged_data, aes(x = TotalMinutesAsleep, y = SedentaryMinutes)) + geom_point() + geom_smooth() + labs(title = "Minutes Asleep Vs. Sedentary Minutes")
+
+```
+
+## High-Level Recommendations
